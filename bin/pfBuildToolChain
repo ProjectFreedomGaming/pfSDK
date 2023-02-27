@@ -1,0 +1,157 @@
+#!/usr/bin/env python
+#
+# SPDX-FileCopyrightText: 2023-present pfSDK contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+import os
+import sys
+import getopt
+import shutil
+
+from utils.pfScriptUtils import pfScriptUtils
+
+__version__ = '0.0.1'
+
+
+# -- Classes
+class pfBuildToolChain:
+    """A tool to easily build the Project Freedom toolchain from scratch."""
+
+    def __init__(self, args):
+        """Constructor based on command line arguments."""
+
+        self.nb_of_cores: int = 8
+        self.target: str = 'm68k-eabi-elf'
+        self.install = False
+
+        try:
+            # -- Gather the arguments
+            opts, arguments = getopt.getopt(args, 'hvi', ['help', 'version', 'install'])
+
+            for o, a in opts:
+                if o in ('-h', '--help'):
+                    pfBuildToolChain.printUsage()
+                    sys.exit(0)
+                elif o in ('-v', '--version'):
+                    pfBuildToolChain.printVersion()
+                    sys.exit(0)
+                elif o in ('-i', '--install'):
+                    self.install = True
+
+            nb_of_arguments: int = len(arguments)
+            if nb_of_arguments == 0:
+                raise RuntimeError('Missing destination folder. Maybe start with `pfBuildToolChain --help?')
+            elif nb_of_arguments != 1:
+                raise RuntimeError('Too many arguments.')
+
+            if not os.path.exists(arguments[0]):
+                raise RuntimeError('Destination folder \'' + arguments[0] + '\' does not exist.')
+
+            self.destination_folder: str = os.path.join(arguments[0], 'pfSDKToolchain')
+            self.sources_folder: str = os.path.join(self.destination_folder, 'sources')
+            self.gcc_build_folder: str = os.path.join(self.destination_folder, 'build', 'gcc')
+            self.binutils_build_folder: str = os.path.join(self.destination_folder, 'build', 'binutils')
+
+            if self.install:
+                sdk_root = os.environ['PF_SDK_ROOT']
+                if sdk_root is None:
+                    raise RuntimeError('You need to define PF_SDK_ROOT to use the install option (are you calling pfSetupEnv.sh?).')
+
+                self.install_folder: str = os.path.join(sdk_root, 'bin', 'macOS', 'gcc')
+
+                if os.path.exists(self.install_folder):
+                    shutil.rmtree(self.install_folder)
+            else:
+                self.install_folder: str = os.path.join(self.destination_folder, self.target)
+
+        except getopt.GetoptError:
+            print('Unknown option or argument. Maybe start with `pfBuildToolChain --help?')
+            sys.exit(0)
+
+    @classmethod
+    def printUsage(cls) -> None:
+        pfBuildToolChain.printVersion()
+        print('')
+        print('usage: pfBuildToolChain <options> destination_folder')
+        print('')
+        print('The following options are supported:')
+        print('')
+        print('   --help/-h          - Show a help message.')
+        print('   --version/-v       - Display the app\'s version.')
+        print('   --install/-i       - Install built toolchain in SDK folder.')
+        print('')
+
+    @classmethod
+    def printVersion(cls) -> None:
+        print('🛠️  pfBuildToolChain v' + __version__ + ' 🛠️')
+
+    def main(self) -> None:
+        print('Building the pfSDK toolchain in \'' + self.destination_folder + '\'.')
+
+        print('Checking that we have the required dependencies...')
+
+        # -- We need brew to potentially install other things
+        pfScriptUtils.requireCommand('brew')
+        print('✅ brew is installed.')
+        # -- These are required for compiling gcc
+        pfScriptUtils.shellCommand(['brew', 'install', 'mpfr', 'libmpc', 'gmp'])
+        print('✅ Dependencies are installed.')
+
+        print('Creating output folders...')
+        os.makedirs(self.destination_folder, exist_ok=True)
+        os.makedirs(self.sources_folder, exist_ok=True)
+        os.makedirs(self.install_folder, exist_ok=True)
+        os.makedirs(self.binutils_build_folder, exist_ok=True)
+        os.makedirs(self.gcc_build_folder, exist_ok=True)
+
+        print('Downloading binutils from our fork...')
+
+        if not os.path.exists(os.path.join(self.sources_folder, 'binutils')):
+            pfScriptUtils.shellCommand(['git', 'clone', 'https://github.com/ProjectFreedomGaming/binutils.git'], from_dir=self.sources_folder)
+            print('✅ Downloaded binutils.')
+
+        print('Building binutils...')
+        pfScriptUtils.shellCommand(['../../sources/binutils/configure', '--target=' + self.target, '--disable-werror', '--prefix=' + self.install_folder],
+                                   from_dir=self.binutils_build_folder,
+                                   env={'CFLAGS': '-arch x86_64 -arch arm64 -g -O2'})
+        pfScriptUtils.shellCommand(['make', '-j', str(self.nb_of_cores)], from_dir=self.binutils_build_folder)
+        pfScriptUtils.shellCommand(['make', 'install'], from_dir=self.binutils_build_folder)
+        print('✅ Built binutils.')
+
+        print('Downloading gcc from our fork...')
+
+        if not os.path.exists(os.path.join(self.sources_folder, 'gcc')):
+            pfScriptUtils.shellCommand(['git', 'clone', 'https://github.com/ProjectFreedomGaming/gcc.git'], from_dir=self.sources_folder)
+            print('✅ Downloaded gcc.')
+
+        print('Building gcc...')
+        # -- For now gcc can't be built as a universal binary because of its dependencies.
+        # -- We'll need to compile mpfr, libmpc and gmp ourselves as universal binary for this.
+        pfScriptUtils.shellCommand(['../../sources/gcc/configure', '--target=' + self.target, '--disable-werror', '--prefix=' + self.install_folder,
+                                   '--enable-languages=c', '--with-gmp=/opt/homebrew', '--with-mpfr=/opt/homebrew', '--with-mpc=/opt/homebrew'],
+                                   from_dir=self.gcc_build_folder)
+        pfScriptUtils.shellCommand(['make', '-j', str(self.nb_of_cores), 'all-gcc'], from_dir=self.gcc_build_folder)
+        pfScriptUtils.shellCommand(['make', 'install-gcc'], from_dir=self.gcc_build_folder)
+        print('✅ Built gcc.')
+
+        print("✅ Done.")
+
+
+def main():
+    try:
+        # -- Remove the first argument (which is the script filename)
+        build = pfBuildToolChain(sys.argv[1:])
+
+        if build is not None:
+            build.main()
+    except Exception as e:
+        print(e)
+        sys.exit(1)
+    except KeyboardInterrupt:
+        print('Execution interrupted by user.')
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
