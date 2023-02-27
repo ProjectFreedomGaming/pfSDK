@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# -- Name of the lib we are building.
+# -- Name of the rom we are building.
 ROM_TARGET = helloworld.pfxrom
 
 # -- Finally the common makefile should be included last.

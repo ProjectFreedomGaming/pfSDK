@@ -54,7 +54,7 @@ Inside `main()` we do a few things and call some api functions. `pf` is the main
 
 In order to build the project we also have a `Makefile`:
 ```
-# -- Name of the lib we are building.
+# -- Name of the rom we are building.
 ROM_TARGET = flashingscreen.pfxrom
 
 # -- Finally the common makefile should be included last.
