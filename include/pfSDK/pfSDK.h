@@ -8,7 +8,6 @@
 #include <pfSDK/Version.h>
 #include <pfSDK/Types.h>
 
-#include <pfSDK/Hardware/Pfx1.h>
 #include <pfSDK/Hardware/Memory.h>
 #include <pfSDK/Hardware/Registers.h>
 
