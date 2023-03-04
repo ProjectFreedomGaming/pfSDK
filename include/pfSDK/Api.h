@@ -12,10 +12,10 @@
 typedef struct pfAPI
 {
     void (*ioPutChar)(char c);
-    void (*pfxWaitVSync)(void);
-    void (*pfxSetClearColor)(byte r, byte g, byte b);
-    void (*pfxClearScreen)(void);
-    void (*pfxSwapBuffers)(void);
+    void (*flipWaitVSync)(void);
+    void (*flipSetClearColor)(byte r, byte g, byte b);
+    void (*flipClearScreen)(void);
+    void (*flipSwapBuffers)(void);
 } pfAPI;
 
 // -- Singleton pointer to the API functions.

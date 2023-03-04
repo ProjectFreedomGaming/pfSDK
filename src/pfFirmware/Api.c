@@ -5,15 +5,15 @@
 #include <pfSDK/Api.h>
 
 #include "Io.h"
-#include "Pfx.h"
+#include "Flip.h"
 
 // -- Singleton pointer to the API functions.
 pfAPI pf_content = {
     &ioPutChar,
-    &pfxWaitVSync,
-    &pfxSetClearColor,
-    &pfxClearScreen,
-    &pfxSwapBuffers
+    &flipWaitVSync,
+    &flipSetClearColor,
+    &flipClearScreen,
+    &flipSwapBuffers
 };
 
 pfAPI *pf = &pf_content;

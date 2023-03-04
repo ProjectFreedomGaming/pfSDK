@@ -13,6 +13,6 @@
 // -- Registers base addresses
 #define PF_CUSTOM_CHIPS_BASE            (pointer)0x00FFC000
 #define PF_IO_BASE                      (pointer)0x00000000
-#define PF_PFX1_BASE                    (pointer)0x00003000
+#define PF_FLIP_BASE                    (pointer)0x00003000
 
 #endif

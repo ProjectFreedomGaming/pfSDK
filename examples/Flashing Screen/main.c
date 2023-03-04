@@ -13,16 +13,16 @@ int main(void)
     
     // -- main() cannot return right now.
     while(1) {
-        pf->pfxWaitVSync();
+        pf->flipWaitVSync();
 
-        pf->pfxSetClearColor(r, g, b);
-        pf->pfxClearScreen();
+        pf->flipSetClearColor(r, g, b);
+        pf->flipClearScreen();
         
         r += 12;
         g += 4;
         b += 34;
 
-        pf->pfxSwapBuffers();
+        pf->flipSwapBuffers();
     }
 
     return 0;
